@@ -56,7 +56,7 @@ def convert_twisted_pair(pairs, labels):
         pool = []
         for item in pair:
             file_path = item
-            class_name = file_path.split("/")[-1]
+            class_name = file_path.split("/")[-2]
             class_label = get_class_num(class_name, labels)
             pool.append((file_path, class_label))
         result.append(pool)
@@ -69,7 +69,7 @@ def converted_twisted_pair_to_example(pairs):
         for i in range(len(pair)):
             file_path, class_label = pair[i]
             result.append(feature("byte", "image"+str(i+1),
-                          tf.io.decode_image(file_path)))
+                          tf.io.serialize_tensor(tf.image.decode_jpeg(tf.io.read_file(file_path)))))
             result.append(feature("int", "label"+str(i+1), class_label))
         yield example(*result)
 
@@ -100,8 +100,8 @@ if __name__ == "__main__":
     print(get_class_num("n02281787", labels))
     print(get_class_num("n03028079", labels))
 
-    pairs = twisted_pair("imagenet/train/*/*.jpg")
-    print(twisted_pair("imagenet/train/*/*.jpg", size=10))
+    pairs = twisted_pair("imagenet/train/*/*.JPEG")
+    print(twisted_pair("imagenet/train/*/*.JPEG", size=10))
 
     converted_pairs = convert_twisted_pair(pairs, labels)
 
