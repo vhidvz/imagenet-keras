@@ -130,21 +130,27 @@ if __name__ == "__main__":
         'label2': tf.io.FixedLenFeature([], tf.int64, default_value=0),
     }
 
-    def _parse_function(example, shape=(480, 480), to_categorical=None):
-        example = tf.io.parse_single_example(example, feature_description)
+    def _parse_function(shape=(480, 480), num_classes=None):
+        def _parse_function_(example):
+            example = tf.io.parse_single_example(example, feature_description)
 
-        image1 = tf.image.resize_with_crop_or_pad(
-            tf.io.decode_jpeg(example['image1']), *shape)
-        image2 = tf.image.resize_with_crop_or_pad(
-            tf.io.decode_jpeg(example['image2']), *shape)
+            image1 = tf.image.resize_with_crop_or_pad(
+                tf.io.decode_jpeg(example['image1']), *shape)
+            image2 = tf.image.resize_with_crop_or_pad(
+                tf.io.decode_jpeg(example['image2']), *shape)
 
-        label1 = example['label1'] if not to_categorical else keras.utils.to_categorical(
-            example['label1'], num_classes=to_categorical)
-        label2 = example['label2'] if not to_categorical else keras.utils.to_categorical(
-            example['label2'], num_classes=to_categorical)
+            label1 = example['label1'] if not num_classes else tf.one_hot(
+                example['label1']-1, num_classes)
+            label2 = example['label2'] if not num_classes else tf.one_hot(
+                example['label2']-1, num_classes)
 
-        return (image1/255.0, image2/2550.0), tf.stack((label1, label2), axis=-1)
+            label1 = tf.cast(label1, tf.float32)
+            label2 = tf.cast(label2, tf.float32)
 
-    parsed_dataset = raw_dataset.map(_parse_function)
+            return (image1/255, image2/2550), tf.stack((label1, label2), axis=0 if num_classes else -1)
+        return _parse_function_
+
+    parsed_dataset = raw_dataset.map(_parse_function())
+    parsed_dataset = raw_dataset.map(_parse_function(num_classes=1000))
 
     print(parsed_dataset.take(1))
