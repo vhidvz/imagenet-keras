@@ -4,7 +4,7 @@ import random
 import tensorflow as tf
 
 
-def _feature(type: "byte" or "float" or "int", key, value):
+def to_feature(type: "byte" or "float" or "int", key, value):
     if type == "byte":
         return {key: tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))}
     elif type == "float":
@@ -13,7 +13,7 @@ def _feature(type: "byte" or "float" or "int", key, value):
         return {key: tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))}
 
 
-def _example(*features):
+def features_to_example(*features):
     feature = {}
     for item in features:
         feature.update(item)
@@ -68,10 +68,10 @@ def converted_twisted_pairs_to_example(pairs):
         result = []
         for i in range(len(pair)):
             file_path, class_label = pair[i]
-            result.append(_feature("byte", "image"+str(i+1),
+            result.append(to_feature("byte", "image"+str(i+1),
                           open(file_path, 'rb').read()))
-            result.append(_feature("int", "label"+str(i+1), class_label))
-        yield _example(*result)
+            result.append(to_feature("int", "label"+str(i+1), class_label))
+        yield features_to_example(*result)
 
 
 def write_examples_to_tfrecord(ds_example, filename, batch_size=None):
