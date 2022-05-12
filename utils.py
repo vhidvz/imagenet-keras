@@ -15,8 +15,8 @@ def feature(type: "byte" or "float" or "int", key, value):
 
 def example(*features):
     feature = {}
-    for key, value in features.items():
-        feature.update({key: value})
+    for item in features:
+        feature.update(item)
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
@@ -43,8 +43,8 @@ def twisted_pair(pattern, size=None):
     for i in range(size):
         while True:
             file = random.choice(files)
-            if not files[i] == file:
-                result.append((files[i], file))
+            if not files[i % len(files)] == file:
+                result.append((files[i % len(files)], file))
                 break
 
     return result
@@ -69,28 +69,31 @@ def converted_twisted_pair_to_example(pairs):
         for i in range(len(pair)):
             file_path, class_label = pair[i]
             result.append(feature("byte", "image"+str(i+1),
-                          tf.io.serialize_tensor(tf.image.decode_jpeg(tf.io.read_file(file_path)))))
+                          open(file_path, 'rb').read()))
             result.append(feature("int", "label"+str(i+1), class_label))
         yield example(*result)
 
 
-def converted_twisted_pair_to_tfrecord(ds_example, filename, size=None):
-    if not size:
+def converted_twisted_pair_to_tfrecord(ds_example, filename, batch_size=None):
+    if not batch_size:
         with tf.io.TFRecordWriter(filename + '.tfrecord') as tf_writer:
-            for example in ds_example:
-                tf_writer.write(example.SerializeToString())
+            for data in ds_example:
+                tf_writer.write(data.SerializeToString())
     else:
         i = 0
         count = 0
-        tf_writer = tf.io.TFRecordWriter(filename + '_' + str(i) + '.tfrecord')
-        for example in ds_example:
-            tf_writer.write(example.SerializeToString())
-            count += 1
-            if count == size:
+        tf_writer = None
+        for data in ds_example:
+            if not count % batch_size:
                 i += 1
                 count = 0
+                if tf_writer:
+                    tf_writer.flush()
+                    tf_writer.close()
                 tf_writer = tf.io.TFRecordWriter(
-                    filename + '_' + str(i) + '.tfrecord')
+                    filename + '_' + '{0:04d}'.format(i) + '.tfrecord')
+            tf_writer.write(data.SerializeToString())
+            count += 1
 
 
 if __name__ == "__main__":
@@ -101,14 +104,14 @@ if __name__ == "__main__":
     print(get_class_num("n03028079", labels))
 
     pairs = twisted_pair("imagenet/train/*/*.JPEG")
-    print(twisted_pair("imagenet/train/*/*.JPEG", size=10))
+    pairs = twisted_pair("imagenet/train/*/*.JPEG", size=10)
+    pairs = twisted_pair("imagenet/train/*/*.JPEG", size=1000)
 
     converted_pairs = convert_twisted_pair(pairs, labels)
 
-    ds_example = converted_twisted_pair_to_example(converted_pairs)
+    ds_example = converted_twisted_pair_to_example
 
-    for example in ds_example:
-        print(example)
-
-    converted_twisted_pair_to_tfrecord(ds_example, "imagenet/train")
-    converted_twisted_pair_to_tfrecord(ds_example, "imagenet/train", size=10)
+    converted_twisted_pair_to_tfrecord(
+        ds_example(converted_pairs), "imagenet/train")
+    converted_twisted_pair_to_tfrecord(ds_example(
+        converted_pairs), "imagenet/train", batch_size=100)
