@@ -27,10 +27,10 @@ def sorted_labels(directory):
     return labels
 
 
-def get_class_num(class_name, labels):
+def get_class_index(class_name, labels):
     for i, label in enumerate(labels):
         if class_name in label:
-            return i + 1  # 1-indexed
+            return i
 
 
 def twisted_pair(pattern, size=None):
@@ -58,7 +58,7 @@ def convert_twisted_pair(pairs, labels):
         for item in pair:
             file_path = item
             class_name = file_path.split("/")[-2]
-            class_label = get_class_num(class_name, labels)
+            class_label = get_class_index(class_name, labels)
             pool.append((file_path, class_label))
         result.append(pool)
     return result
@@ -100,9 +100,9 @@ def write_examples_to_tfrecord(ds_example, filename, batch_size=None):
 if __name__ == "__main__":
     labels = sorted_labels("imagenet/train")
 
-    print(get_class_num("n01484850", labels))
-    print(get_class_num("n02281787", labels))
-    print(get_class_num("n03028079", labels))
+    print(get_class_index("n01484850", labels))
+    print(get_class_index("n02281787", labels))
+    print(get_class_index("n03028079", labels))
 
     pairs = twisted_pair("imagenet/train/*/*.JPEG")
     pairs = twisted_pair("imagenet/train/*/*.JPEG", size=10)
@@ -138,9 +138,9 @@ if __name__ == "__main__":
                 tf.io.decode_jpeg(example['image2']), *shape)
 
             label1 = example['label1'] if not num_classes else tf.one_hot(
-                example['label1']-1, num_classes)
+                example['label1'], num_classes)
             label2 = example['label2'] if not num_classes else tf.one_hot(
-                example['label2']-1, num_classes)
+                example['label2'], num_classes)
 
             label1 = tf.cast(label1, tf.float32)
             label2 = tf.cast(label2, tf.float32)
