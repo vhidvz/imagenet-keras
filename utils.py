@@ -4,7 +4,7 @@ import random
 import tensorflow as tf
 
 
-def feature(type: "byte" or "float" or "int", key, value):
+def _feature(type: "byte" or "float" or "int", key, value):
     if type == "byte":
         return {key: tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))}
     elif type == "float":
@@ -13,7 +13,7 @@ def feature(type: "byte" or "float" or "int", key, value):
         return {key: tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))}
 
 
-def example(*features):
+def _example(*features):
     feature = {}
     for item in features:
         feature.update(item)
@@ -63,18 +63,18 @@ def convert_twisted_pair(pairs, labels):
     return result
 
 
-def converted_twisted_pair_to_example(pairs):
+def converted_twisted_pairs_to_example(pairs):
     for pair in pairs:
         result = []
         for i in range(len(pair)):
             file_path, class_label = pair[i]
-            result.append(feature("byte", "image"+str(i+1),
+            result.append(_feature("byte", "image"+str(i+1),
                           open(file_path, 'rb').read()))
-            result.append(feature("int", "label"+str(i+1), class_label))
-        yield example(*result)
+            result.append(_feature("int", "label"+str(i+1), class_label))
+        yield _example(*result)
 
 
-def converted_twisted_pair_to_tfrecord(ds_example, filename, batch_size=None):
+def write_examples_to_tfrecord(ds_example, filename, batch_size=None):
     if not batch_size:
         with tf.io.TFRecordWriter(filename + '.tfrecord') as tf_writer:
             for data in ds_example:
@@ -109,9 +109,9 @@ if __name__ == "__main__":
 
     converted_pairs = convert_twisted_pair(pairs, labels)
 
-    ds_example = converted_twisted_pair_to_example
+    ds_example = converted_twisted_pairs_to_example
 
-    converted_twisted_pair_to_tfrecord(
+    write_examples_to_tfrecord(
         ds_example(converted_pairs), "imagenet/train")
-    converted_twisted_pair_to_tfrecord(ds_example(
-        converted_pairs), "imagenet/train", batch_size=100)
+    write_examples_to_tfrecord(
+        ds_example(converted_pairs), "imagenet/train", batch_size=100)
