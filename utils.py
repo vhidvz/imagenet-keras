@@ -1,7 +1,10 @@
 import glob
 import random
+import numpy as np
 
 import tensorflow as tf
+
+from tensorflow import keras
 
 
 def to_feature(type: "byte" or "float" or "int", key, value):
@@ -115,3 +118,33 @@ if __name__ == "__main__":
         ds_example(converted_pairs), "imagenet/train")
     write_examples_to_tfrecord(
         ds_example(converted_pairs), "imagenet/train", batch_size=100)
+
+    # read tf records
+    filenames = glob.glob('imagenet/train/train_*.tfrecord')
+    raw_dataset = tf.data.TFRecordDataset(filenames)
+
+    feature_description = {
+        'image1': tf.io.FixedLenFeature([], tf.string, default_value=''),
+        'label1': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+        'image2': tf.io.FixedLenFeature([], tf.string, default_value=''),
+        'label2': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+    }
+
+    def _parse_function(example, shape=(480, 480), to_categorical=None):
+        example = tf.io.parse_single_example(example, feature_description)
+
+        image1 = tf.image.resize_with_crop_or_pad(
+            tf.io.decode_jpeg(example['image1']), *shape)
+        image2 = tf.image.resize_with_crop_or_pad(
+            tf.io.decode_jpeg(example['image2']), *shape)
+
+        label1 = example['label1'] if not to_categorical else keras.utils.to_categorical(
+            example['label1'], num_classes=to_categorical)
+        label2 = example['label2'] if not to_categorical else keras.utils.to_categorical(
+            example['label2'], num_classes=to_categorical)
+
+        return (image1/255.0, image2/2550.0), tf.stack((label1, label2), axis=-1)
+
+    parsed_dataset = raw_dataset.map(_parse_function)
+
+    print(parsed_dataset.take(1))
