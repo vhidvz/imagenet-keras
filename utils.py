@@ -4,8 +4,6 @@ import numpy as np
 
 import tensorflow as tf
 
-from tensorflow import keras
-
 
 def to_feature(type: "byte" or "float" or "int", key, value):
     if type == "byte":
